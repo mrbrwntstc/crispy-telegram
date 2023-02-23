@@ -18,3 +18,4 @@ cd build
 ### Controls
 - `Esc` - Exit the game
 - Paddle moves with the A and D keys
+- Press `Space` to get the ball rolling
