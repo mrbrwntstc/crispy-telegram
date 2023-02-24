@@ -10,6 +10,7 @@ set(SOURCE_FILES
   "src/game_object.cpp" "src/game_object.h"
   "src/game_level.cpp" "src/game_level.h"
   "src/ball_object.cpp" "src/ball_object.h"
+  "src/particle_generator.cpp" "src/particle_generator.h"
   "src/stb_image.h"
   "src/program.cpp"
 )

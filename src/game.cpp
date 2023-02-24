@@ -3,12 +3,14 @@
 #include "sprite_renderer.h"
 #include "game_object.h"
 #include "ball_object.h"
+#include "particle_generator.h"
 
 // game-related state data
 // -----------------------
 SpriteRenderer *renderer;
 GameObject *player;
 BallObject *ball;
+ParticleGenerator *particles;
 
 bool check_collision(GameObject &one, GameObject &two);
 collision check_collision(BallObject &one, GameObject &two);
@@ -27,20 +29,21 @@ Game::~Game()
   delete renderer;
   delete player;
   delete ball;
+  delete particles;
 }
 
 void
 Game::init()
 {
   ResourceManager::load_shader("../assets/shaders/sprite.vs", "../assets/shaders/sprite.fs", nullptr, "sprite");
+  ResourceManager::load_shader("../assets/shaders/particle.vs", "../assets/shaders/particle.fs", nullptr, "particle");
   // configure shaders
   // -----------------
   glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(this->width), static_cast<float>(this->height), 0.0f, -1.0f, 1.0f);
   ResourceManager::get_shader("sprite").use().set_integer("image", 0);
   ResourceManager::get_shader("sprite").set_matrix4("projection", projection);
-  // set render-specific controls
-  // ----------------------------
-  renderer = new SpriteRenderer(ResourceManager::get_shader("sprite"));
+  ResourceManager::get_shader("particle").use().set_integer("sprite", 0);
+  ResourceManager::get_shader("particle").set_matrix4("projection", projection);
   // load textures
   // -------------
   ResourceManager::load_texture("../assets/textures/awesomeface.png", true, "face");
@@ -48,6 +51,11 @@ Game::init()
   ResourceManager::load_texture("../assets/textures/block.png", false, "block");
   ResourceManager::load_texture("../assets/textures/block_solid.png", false, "block_solid");
   ResourceManager::load_texture("../assets/textures/paddle.png", true, "paddle");
+  ResourceManager::load_texture("../assets/textures/particle.png", true, "particle");
+  // set render-specific controls
+  // ----------------------------
+  renderer = new SpriteRenderer(ResourceManager::get_shader("sprite"));
+  particles = new ParticleGenerator(ResourceManager::get_shader("particle"), ResourceManager::get_texture("particle"), 500);
   // load levels
   // -----------
   GameLevel one;
@@ -82,6 +90,12 @@ Game::update(float delta)
 {
   ball->move(delta, this->width);
   this->do_collisions();
+  particles->update(delta, *ball, 2, glm::vec2(ball->radius / 2.0f));
+  // check loss condition
+  if(ball->position.y >= this->height) {
+    this->reset_level();
+    this->reset_player();
+  }
 }
 
 void
@@ -122,9 +136,33 @@ Game::render()
     this->levels[this->level].draw(*renderer);
     // draw player
     player->draw(*renderer);
+    // particles before ball
+    particles->draw();
     // draw ball
     ball->draw(*renderer);
   }
+}
+
+void
+Game::reset_level()
+{
+  if(this->level == 0) {
+    this->levels[0].load("../assets/levels/one.lvl", this->width, this->height / 2);
+  } else if(this->level == 1) {
+    this->levels[1].load("../assets/levels/two.lvl", this->width, this->height / 2);
+  } else if(this->level == 2) {
+    this->levels[2].load("../assets/levels/three.lvl", this->width, this->height / 2);
+  } else if(this->level == 3) {
+    this->levels[3].load("../assets/levels/four.lvl", this->width, this->height / 2);
+  }
+}
+
+void
+Game::reset_player()
+{
+  player->size = player_size;
+  player->position = glm::vec2(this->width / 2.0f - player_size.x / 2.0f, this->height - player_size.y);
+  ball->reset(player->position + glm::vec2(player_size.x / 2.0f - ball_radius, -(ball_radius * 2.0f)), initial_ball_velocity);
 }
 
 void
